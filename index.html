@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecruitReady - Resume & Job Matching Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- PDF.js for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RecruitReady</h1>
+            <p>Get ready to impress recruiters by optimizing your resume and generating impressive, tailored cover letters.</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-card">
+                    <h2>Upload Your Resume</h2>
+                    <div class="file-drop-area" id="resumeDropArea">
+                        <div class="file-drop-icon">📄</div>
+                        <p>Drop your resume here or <span class="browse-link">browse files</span></p>
+                        <p><small>Supports: .txt and .pdf files with automatic text extraction</small></p>
+                        <input type="file" id="resumeInput" accept=".pdf,.doc,.docx,.txt" hidden>
+                        <div class="file-info" id="resumeInfo" style="display: none;"></div>
+                    </div>
+                    <div class="text-input-option">
+                        <h3>📝 Or Paste Resume Text (Alternative Option)</h3>
+                        <textarea id="resumeTextArea" placeholder="If you prefer, you can also paste your resume content here..." rows="8"></textarea>
+                    </div>
+                </div>
+
+                <div class="upload-card">
+                    <h2>Job Description</h2>
+                    <textarea id="jobDescription" placeholder="Paste the job description here..." rows="15"></textarea>
+                    <p><small>💡 Tip: Include the full job description with requirements and qualifications for better matching</small></p>
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="analyzeBtn" class="primary-btn" disabled>
+                    <span class="btn-icon">🔍</span>
+                    Analyze Match
+                </button>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-grid">
+                    <div class="result-card match-score-card">
+                        <h3>Match Score</h3>
+                        <div class="score-circle">
+                            <div class="score-value" id="matchScore">0%</div>
+                        </div>
+                        <div class="score-label">Overall Match</div>
+                        <div class="score-details">
+                            <small>
+                                <div>🔍 Semantic: <span id="semanticScore">0%</span></div>
+                                <div>🔑 Keywords: <span id="keywordScore">0%</span></div>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="result-card keywords-card">
+                        <h3>Keyword Analysis</h3>
+                        <div class="keywords-stats">
+                            <div class="stat">
+                                <span class="stat-number" id="foundKeywords">0</span>
+                                <span class="stat-label">Found Keywords</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number" id="missingKeywords">0</span>
+                                <span class="stat-label">Missing Keywords</span>
+                            </div>
+                        </div>
+                        <div class="keywords-container">
+                            <div class="keywords-section">
+                                <h4 class="keywords-title found">✅ Found Keywords</h4>
+                                <div class="keywords-list" id="foundKeywordsList"></div>
+                            </div>
+                            <div class="keywords-section">
+                                <h4 class="keywords-title missing">❌ Missing Keywords</h4>
+                                <div class="keywords-list" id="missingKeywordsList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cover-letter-section">
+                    <div class="cover-letter-card">
+                        <div class="cover-letter-header">
+                            <h3>🎆 Cover Letter Generator</h3>
+                            <div class="mode-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="aiModeToggle">
+                                    <span class="slider">Free</span>
+                                    <span class="slider-label">AI Enhanced</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Free Mode Info -->
+                        <div class="info-section" id="freeModeInfo">
+                            <p>🎆 <strong>100% Free:</strong> No API keys, no costs, works entirely in your browser!</p>
+                            <p>🔒 <strong>Private:</strong> Your data never leaves your device.</p>
+                        </div>
+                        
+                        <!-- AI Mode Inputs -->
+                        <div class="ai-mode-section" id="aiModeSection" style="display: none;">
+                            <div class="structured-inputs">
+                                <div class="input-row">
+                                    <input type="text" id="jobTitleInput" placeholder="Job Title (e.g., Software Engineer)" class="structured-input">
+                                    <input type="text" id="companyInput" placeholder="Company Name" class="structured-input">
+                                </div>
+                                <div class="input-row">
+                                    <textarea id="whyInterestedInput" placeholder="Why are you interested in this role? (1-2 sentences)" rows="2" class="structured-textarea"></textarea>
+                                </div>
+                                <div class="api-key-input-group">
+                                    <select id="llmProvider" class="provider-select">
+                                        <option value="openai">OpenAI GPT-4o Mini ($0.0005/letter)</option>
+                                        <option value="gemini">Google Gemini Flash</option>
+                                    </select>
+                                    <input type="password" id="apiKeyInput" placeholder="API Key" class="api-key-input">
+                                    <button id="saveApiKey" class="save-key-btn">Save</button>
+                                </div>
+                                <div class="api-info">
+                                    <p>💰 <strong>Cost:</strong> ~$0.0005 per letter (1000s free with API credits)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="cover-letter-controls">
+                            <select id="toneSelector" class="tone-select">
+                                <option value="professional">Professional</option>
+                                <option value="enthusiastic">Enthusiastic</option>
+                                <option value="formal">Formal</option>
+                                <option value="conversational">Conversational</option>
+                            </select>
+                            <button id="generateCoverLetterBtn" class="generate-btn">
+                                <span class="btn-text">Generate Cover Letter</span>
+                                <div class="loading-spinner" style="display: none;"></div>
+                            </button>
+                        </div>
+                        
+                        <div id="coverLetterLoading" class="loading" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p id="loadingText">Crafting your personalized cover letter...</p>
+                        </div>
+                        
+                        <div class="cover-letter-content" id="coverLetterContent" style="display: none;">
+                            <div class="letter-actions">
+                                <button id="copyLetter" class="action-btn">📋 Copy to Clipboard</button>
+                                <button id="regenerateLetter" class="action-btn">🔄 Regenerate</button>
+                                <button id="editLetter" class="action-btn">✏️ Edit Mode</button>
+                                <button id="downloadLetter" class="action-btn">💾 Download</button>
+                            </div>
+                            <textarea id="coverLetterText" class="cover-letter-textarea" rows="20" placeholder="Your personalized cover letter will appear here..."></textarea>
+                            <div class="letter-stats">
+                                <span id="wordCount">0 words</span> • 
+                                <span id="charCount">0 characters</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recommendations-section">
+                    <div class="recommendations-card">
+                        <h3>💡 Recommendations</h3>
+                        <div id="recommendations" class="recommendations-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 RecruitReady. Empowering your job search journey.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
