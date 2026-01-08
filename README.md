@@ -2,7 +2,7 @@
 
 **Get ready to impress recruiters by optimizing your resume and generating impressive, tailored cover letters.**
 
-🌐 **[Try RecruitReady Live](https://gunjan-d.github.io/RecruitReady/)** 
+🌐 **<a href="https://gunjan-d.github.io/RecruitReady/" target="_blank">Try RecruitReady Live</a>** 
 
 RecruitReady is an advanced job application optimization tool that uses sophisticated algorithms and AI to help job seekers create compelling applications that stand out to recruiters and pass through Applicant Tracking Systems (ATS).
 
