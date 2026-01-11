@@ -39,11 +39,34 @@ header {
     padding: 60px 0 40px;
 }
 
+.header-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.logo-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.app-icon {
+    color: var(--primary-color);
+    filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
+    transition: transform 0.3s ease;
+}
+
+.app-icon:hover {
+    transform: scale(1.05) rotate(5deg);
+}
+
 header h1 {
     font-size: 3rem;
     font-weight: 800;
     color: var(--primary-color);
-    margin-bottom: 16px;
+    margin: 0;
     letter-spacing: -0.025em;
 }
 
@@ -51,6 +74,29 @@ header p {
     font-size: 1.25rem;
     color: var(--text-secondary);
     font-weight: 500;
+}
+
+.tech-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.tech-tag {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease;
+}
+
+.tech-tag:hover {
+    transform: translateY(-1px);
 }
 
 .upload-section {

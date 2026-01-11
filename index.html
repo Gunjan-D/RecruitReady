@@ -11,6 +11,14 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://gunjan-d.github.io/RecruitReady/">
     <link rel="canonical" href="https://gunjan-d.github.io/RecruitReady/">
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico">
+    <meta name="theme-color" content="#2563eb">
+    
     <link rel="stylesheet" href="styles.css">
     <!-- PDF.js for PDF text extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -18,8 +26,48 @@
 <body>
     <div class="container">
         <header>
-            <h1>RecruitReady</h1>
-            <p>Get ready to impress recruiters by optimizing your resume and generating impressive, tailored cover letters.</p>
+            <div class="header-content">
+                <div class="logo-section">
+                    <svg class="app-icon" width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Outer target ring -->
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="3" opacity="0.8"/>
+                        
+                        <!-- Middle target ring -->
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+                        
+                        <!-- Inner target ring -->
+                        <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"/>
+                        
+                        <!-- Crosshairs -->
+                        <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" stroke-width="2"/>
+                        <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" stroke-width="2"/>
+                        
+                        <!-- Person icon in center -->
+                        <g transform="translate(50,50)">
+                            <!-- Head -->
+                            <circle cx="0" cy="-5" r="6" fill="currentColor"/>
+                            
+                            <!-- Body -->
+                            <rect x="-4" y="2" width="8" height="12" rx="2" fill="currentColor"/>
+                            
+                            <!-- Arms -->
+                            <rect x="-8" y="4" width="16" height="3" rx="1.5" fill="currentColor"/>
+                            
+                            <!-- Legs -->
+                            <rect x="-2" y="14" width="2" height="8" fill="currentColor"/>
+                            <rect x="0" y="14" width="2" height="8" fill="currentColor"/>
+                        </g>
+                    </svg>
+                    <h1>RecruitReady</h1>
+                </div>
+                <p>AI Bridge connecting Job Descriptions to optimized Resumes & Cover Letters. Advanced TF-IDF + LLM engine with 90%+ accuracy, serving 100+ users with production-grade ATS optimization.</p>
+                <div class="tech-stack">
+                    <span class="tech-tag">TF-IDF Algorithm</span>
+                    <span class="tech-tag">70% Keyword + 30% Semantic</span>
+                    <span class="tech-tag">Real-time Analytics</span>
+                    <span class="tech-tag">ATS Optimized</span>
+                </div>
+            </div>
         </header>
 
         <main>

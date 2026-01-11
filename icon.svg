@@ -1,0 +1,30 @@
+<svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer target ring -->
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#2563eb" stroke-width="3"/>
+  
+  <!-- Middle target ring -->
+  <circle cx="50" cy="50" r="35" fill="none" stroke="#60a5fa" stroke-width="2"/>
+  
+  <!-- Inner target ring -->
+  <circle cx="50" cy="50" r="25" fill="none" stroke="#93c5fd" stroke-width="2"/>
+  
+  <!-- Crosshairs -->
+  <line x1="5" y1="50" x2="95" y2="50" stroke="#1e40af" stroke-width="2"/>
+  <line x1="50" y1="5" x2="50" y2="95" stroke="#1e40af" stroke-width="2"/>
+  
+  <!-- Person icon in center -->
+  <g transform="translate(50,50)">
+    <!-- Head -->
+    <circle cx="0" cy="-5" r="6" fill="#1e40af"/>
+    
+    <!-- Body -->
+    <rect x="-4" y="2" width="8" height="12" rx="2" fill="#1e40af"/>
+    
+    <!-- Arms -->
+    <rect x="-8" y="4" width="16" height="3" rx="1.5" fill="#1e40af"/>
+    
+    <!-- Legs -->
+    <rect x="-2" y="14" width="2" height="8" fill="#1e40af"/>
+    <rect x="0" y="14" width="2" height="8" fill="#1e40af"/>
+  </g>
+</svg>

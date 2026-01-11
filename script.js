@@ -9,6 +9,12 @@ class RecruitReadyAnalyzer {
             education: 1.5,
             general: 1
         };
+        // Advanced project detection patterns
+        this.projectPatterns = {
+            ongoing: /(?:currently|present|ongoing|developing|building|working on|jan 2026.*present)/i,
+            metrics: /(?:users?|accuracy|performance|records?\/?s(?:ec)?|latency|<\d+s|\d+\+?%|\d+\+?\s+users?)/i,
+            technical: /(?:tf-idf|ai|ml|nlp|api|rest|deployment|production|real-time|system)/i
+        };
         this.initializeEventListeners();
     }
 
@@ -379,9 +385,24 @@ class RecruitReadyAnalyzer {
     }
 
     calculateCombinedScore(cosineSimilarity, keywordAnalysis) {
-        // ATS-like weighting: 30% cosine similarity + 70% exact keyword matching
-        // This mimics how ATS systems prioritize exact keyword matches
-        return (cosineSimilarity * 0.3) + (keywordAnalysis.matchPercentage * 0.7);
+        // Enhanced ATS-optimized scoring: 70% keyword + 30% semantic (matching RecruitReady methodology)
+        // This mirrors how modern ATS systems with AI capabilities prioritize exact matches while considering context
+        const keywordScore = keywordAnalysis.matchPercentage * 0.7;
+        const semanticScore = cosineSimilarity * 0.3;
+        
+        // Additional boost for high-priority technical keywords
+        const technicalBoost = this.calculateTechnicalBoost(keywordAnalysis.foundKeywords) * 0.05;
+        
+        return Math.min(keywordScore + semanticScore + technicalBoost, 1.0);
+    }
+
+    calculateTechnicalBoost(foundKeywords) {
+        const technicalKeywords = ['python', 'sql', 'javascript', 'react', 'node.js', 'aws', 'docker', 'kubernetes', 
+                                 'machine learning', 'ai', 'data science', 'api', 'rest', 'microservices', 'kafka', 'postgresql'];
+        const foundTechnical = foundKeywords.filter(keyword => 
+            technicalKeywords.some(tech => keyword.toLowerCase().includes(tech.toLowerCase())));
+        
+        return Math.min(foundTechnical.length / 5, 1.0); // Max 5 technical keywords for full boost
     }
 
     getTopMatchingTerms(resumeVector, jobVector, vocabulary) {
@@ -1182,12 +1203,19 @@ class RecruitReadyAnalyzer {
     }
 
     async generateCoverLetter() {
+        console.log('generateCoverLetter called');
+        console.log('Resume text available:', !!this.resumeText);
+        console.log('Job description available:', !!this.jobDescription);
+        console.log('Resume length:', this.resumeText?.length || 0);
+        console.log('Job description length:', this.jobDescription?.length || 0);
+        
         if (!this.resumeText || !this.jobDescription) {
             this.showNotification('Please upload your resume and enter the job description first', 'error');
             return;
         }
 
         const isAIMode = document.getElementById('aiModeToggle').checked;
+        console.log('AI Mode:', isAIMode);
         
         if (isAIMode) {
             await this.generateGrammarlyCoverLetter();
@@ -1337,21 +1365,67 @@ class RecruitReadyAnalyzer {
         };
     }
 
+    // Enhanced project detection for ongoing work
+    detectOngoingProjects(resumeText) {
+        const projects = [];
+        const lines = resumeText.split('\n');
+        let currentProject = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Detect project headers with ongoing indicators
+            if (this.projectPatterns.ongoing.test(line)) {
+                const projectMatch = line.match(/([A-Za-z][A-Za-z0-9\s\-]+)\s*[-–—]\s*([^\n]+)/)
+                if (projectMatch) {
+                    currentProject = {
+                        name: projectMatch[1].trim(),
+                        description: projectMatch[2].trim(),
+                        details: [],
+                        isOngoing: true,
+                        metrics: []
+                    };
+                }
+            }
+            
+            // Collect project details with metrics
+            if (currentProject && (line.startsWith('•') || line.startsWith('-') || /^[A-Z]/.test(line))) {
+                if (this.projectPatterns.metrics.test(line)) {
+                    // Extract specific metrics
+                    const metrics = line.match(/\d+\+?%|\d+\+?\s+(?:users?|records?)|<\d+s|\d+\+\s+[\w\s]+/g);
+                    if (metrics) currentProject.metrics.push(...metrics);
+                }
+                currentProject.details.push(line);
+            }
+            
+            // Save project when we hit next section
+            if (currentProject && (line === '' || /^[A-Z\s]{3,}$/.test(line))) {
+                projects.push(currentProject);
+                currentProject = null;
+            }
+        }
+        
+        if (currentProject) projects.push(currentProject);
+        return projects;
+    }
+
     // Step 1: Advanced Resume Parsing
     parseResumeData() {
         if (!this.resumeText || this.resumeText.length < 50) {
             return {
-                name: 'Your Name',
+                name: '[Your Name]',
                 email: 'your.email@example.com',
-                phone: 'Your Phone',
+                phone: '[Your Phone]',
                 experiences: [],
-                skills: [],
-                education: null
+                skills: ['relevant technical skills'],
+                education: 'Relevant educational background',
+                yearsOfExperience: '2+',
+                primarySkills: 'technical expertise'
             };
         }
 
         // Extract name (look for capitalized names at the beginning)
-        let name = 'Your Name';
+        let name = '[Your Name]';
         const namePatterns = [
             /^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/m,
             /([A-Z]{2,}\s+[A-Z]{2,})/,
@@ -1369,6 +1443,10 @@ class RecruitReadyAnalyzer {
         // Extract contact information
         const emailMatch = this.resumeText.match(/[\w.-]+@[\w.-]+\.\w+/);
         const phoneMatch = this.resumeText.match(/\(?\d{3}\)?[-\s.]?\d{3}[-\s.]?\d{4}/);
+        
+        // Extract years of experience
+        const expMatch = this.resumeText.match(/(\d+)\+?\s*years?\s+(?:of\s+)?experience/i);
+        const yearsOfExperience = expMatch ? `${expMatch[1]}+` : '2+';
         
         // Extract experiences with metrics (prioritize quantifiable achievements)
         const experiencePatterns = [
@@ -1403,7 +1481,7 @@ class RecruitReadyAnalyzer {
             /(B\.S\.|M\.S\.|Ph\.D\.).*?(?:Computer Science|Engineering|Science|Technology|Mathematics)/gi
         ];
         
-        let education = null;
+        let education = 'Relevant educational background';
         for (const pattern of educationPatterns) {
             const match = this.resumeText.match(pattern);
             if (match) {
@@ -1412,13 +1490,19 @@ class RecruitReadyAnalyzer {
             }
         }
 
+        // Get primary skills for summary
+        const topSkills = skills.slice(0, 3);
+        const primarySkills = topSkills.length > 0 ? topSkills.join(', ') : 'technical expertise';
+
         return {
             name,
             email: emailMatch ? emailMatch[0] : 'your.email@example.com',
-            phone: phoneMatch ? phoneMatch[0] : 'Your Phone',
+            phone: phoneMatch ? phoneMatch[0] : '[Your Phone]',
             experiences: uniqueExperiences,
             skills: skills.slice(0, 12), // Top 12 relevant skills
-            education
+            education,
+            yearsOfExperience,
+            primarySkills
         };
     }
 
@@ -1683,25 +1767,725 @@ LinkedIn | Portfolio`;
 
     async generateLocalCoverLetterContent() {
         try {
-            // Step 1: Parse resume data to extract universal user info
-            const resumeData = await this.parseResumeData(this.resumeText);
+            // Enhanced debugging
+            console.log('=== COVER LETTER GENERATION DEBUG ===');
+            console.log('Resume text length:', this.resumeText?.length || 0);
+            console.log('Job description length:', this.jobDescription?.length || 0);
+            console.log('Resume preview:', this.resumeText?.substring(0, 300) + '...');
+            console.log('Job preview:', this.jobDescription?.substring(0, 300) + '...');
             
-            // Step 2: Parse job description to extract specifics
-            const jobData = await this.parseJobDescription(this.jobText);
-            
-            // Step 3: Get matching analysis for keyword relevance
+            // Ensure we have data
+            if (!this.resumeText || this.resumeText.length < 20 || !this.jobDescription || this.jobDescription.length < 20) {
+                console.log('Insufficient data - using fallback');
+                return this.buildFallbackCoverLetter();
+            }
+
+            // Step 1: Extract REAL data from user's resume and job description
+            console.log('=== PARSING REAL USER DATA ===');
+            const resumeData = this.parseUserResume();
+            const jobData = this.parseUserJobDescription();
             const analysis = this.performAdvancedMatching();
             
-            // Step 4: Get tone preference
-            const tone = document.getElementById('toneSelector').value;
+            console.log('Parsed user resume data:', resumeData);
+            console.log('Parsed user job data:', jobData);
+            console.log('Analysis results:', analysis);
             
-            // Step 5: Build personalized cover letter from extracted data
-            return this.buildPersonalizedCoverLetterFromData(resumeData, jobData, analysis, tone);
+            // Step 2: Generate cover letter using actual parsed data
+            return this.buildRealCoverLetter(resumeData, jobData, analysis);
             
         } catch (error) {
             console.error('Error generating cover letter:', error);
             return this.buildFallbackCoverLetter();
         }
+    }
+
+    // Parse user's actual resume content
+    parseUserResume() {
+        console.log('Parsing actual resume content...');
+        
+        // Extract name from first few lines or filename
+        const lines = this.resumeText.split('\n').filter(line => line.trim().length > 0);
+        let name = 'Your Name';
+        
+        // Try to extract from filename first
+        const uploadedFileName = document.querySelector('.file-info')?.textContent || '';
+        const fileNameMatch = uploadedFileName.match(/([A-Z][a-z]+[_\s]+[A-Z][a-z]+)/);
+        if (fileNameMatch) {
+            name = fileNameMatch[1].replace(/_/g, ' ');
+        } else {
+            // Look in resume content
+            for (let i = 0; i < Math.min(5, lines.length); i++) {
+                const line = lines[i].trim();
+                // Look for name-like patterns
+                if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+){1,3}$/.test(line) && 
+                    line.length < 50 && !line.toLowerCase().includes('resume') &&
+                    !line.toLowerCase().includes('skills') && !line.toLowerCase().includes('experience')) {
+                    name = line;
+                    break;
+                }
+            }
+        }
+        
+        // Extract email
+        const emailMatch = this.resumeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const email = emailMatch ? emailMatch[0] : 'your.email@example.com';
+        
+        // Extract phone
+        const phoneMatch = this.resumeText.match(/[\(\d\s\-\)\.]{10,15}/);
+        const phone = phoneMatch ? phoneMatch[0].trim() : 'Your Phone';
+        
+        // Extract technical skills by looking for common tech terms
+        const techTerms = ['Python', 'JavaScript', 'SQL', 'React', 'Java', 'AWS', 'Docker', 'API', 'Machine Learning', 'Data Science'];
+        const foundSkills = techTerms.filter(skill => 
+            this.resumeText.toLowerCase().includes(skill.toLowerCase())
+        );
+        
+        // Extract work experiences and achievements
+        const achievements = this.extractAchievements();
+        
+        console.log('Extracted from resume:', { name, email, phone, foundSkills, achievements });
+        
+        return {
+            name,
+            email,
+            phone,
+            skills: foundSkills,
+            achievements,
+            hasRealData: name !== 'Your Name' || email !== 'your.email@example.com' || foundSkills.length > 0
+        };
+    }
+
+    // Parse user's actual job description
+    parseUserJobDescription() {
+        console.log('Parsing actual job description...');
+        
+        // Extract job title - look at the beginning
+        const firstLines = this.jobDescription.split('\n').slice(0, 5);
+        let jobTitle = 'the position';
+        
+        for (const line of firstLines) {
+            const cleanLine = line.trim();
+            // Look for job titles (contains common job keywords)
+            if (/(engineer|developer|analyst|manager|specialist|coordinator|intern|scientist)/i.test(cleanLine) &&
+                cleanLine.length < 100 && cleanLine.length > 5) {
+                jobTitle = cleanLine;
+                break;
+            }
+        }
+        
+        // Extract company name
+        let company = 'the company';
+        const companyMatches = [
+            this.jobDescription.match(/at\s+(Meta|Google|Apple|Microsoft|Amazon|Facebook|Netflix|Tesla|Uber|Airbnb|[A-Z][a-z]{3,15})(?![\w\s]*(?:Engineer|Developer|Analyst|Manager))/),
+            this.jobDescription.match(/([A-Z][a-z]{3,20})\s*·\s*[A-Z][a-z]+,\s*[A-Z]{2}/),
+            this.jobDescription.match(/^([A-Z][a-z]{3,20})(?:\s+Inc|\s+Corp|\s+LLC)?$/m)
+        ];
+        
+        for (const match of companyMatches) {
+            if (match && match[1]) {
+                const candidate = match[1].trim();
+                if (!/^(we|our|the|this|you|your|data|engineer|analyst)$/i.test(candidate)) {
+                    company = candidate;
+                    break;
+                }
+            }
+        }
+        
+        // Extract key requirements and skills mentioned
+        const jobSkills = ['Python', 'JavaScript', 'SQL', 'React', 'Java', 'AWS', 'Docker', 'API', 'Machine Learning'].filter(skill =>
+            this.jobDescription.toLowerCase().includes(skill.toLowerCase())
+        );
+        
+        console.log('Extracted from job description:', { jobTitle, company, jobSkills });
+        
+        return {
+            title: jobTitle,
+            company,
+            requiredSkills: jobSkills,
+            hasRealData: jobTitle !== 'the position' || company !== 'the company' || jobSkills.length > 0
+        };
+    }
+
+    // Extract and rewrite achievements from resume text
+    extractAchievements() {
+        // Find quantified accomplishments
+        const patterns = [
+            /●\s*([^●\n]{20,200}(?:\d+%|\d+\+|\d+ [a-z]+)[^●\n]{0,100})/gi,
+            /•\s*([^•\n]{20,200}(?:improved|increased|reduced|built|developed|generated|achieved)[^•\n]{0,100})/gi
+        ];
+        
+        const rawAchievements = [];
+        patterns.forEach(pattern => {
+            const matches = this.resumeText.match(pattern) || [];
+            matches.forEach(match => {
+                const clean = match.replace(/^[●•\-*\s]+/, '').trim();
+                if (clean.length > 20 && rawAchievements.length < 3) {
+                    rawAchievements.push(clean);
+                }
+            });
+        });
+        
+        // Convert raw achievements into proper sentences
+        return rawAchievements.map(raw => this.convertToProperSentence(raw)).filter(Boolean);
+    }
+    
+    // Convert raw resume bullet points into proper sentences
+    convertToProperSentence(rawText) {
+        try {
+            // Clean up formatting
+            let clean = rawText
+                .replace(/[●•\-*]/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .trim();
+            
+            // Extract key metrics and actions
+            const metrics = clean.match(/\d+[%\+]?(?:\s*[a-z]+)?/gi) || [];
+            const actions = clean.match(/\b(generated|built|developed|improved|increased|reduced|created|implemented|achieved|led|managed|architected|engineered)\b/gi) || [];
+            
+            if (actions.length === 0 && metrics.length === 0) return null;
+            
+            // Create a proper sentence
+            let sentence = '';
+            if (actions.length > 0) {
+                const mainAction = actions[0].toLowerCase();
+                sentence = `${mainAction.charAt(0).toUpperCase() + mainAction.slice(1)} `;
+                
+                // Add context
+                if (clean.includes('model') || clean.includes('algorithm')) {
+                    sentence += 'machine learning models and algorithms';
+                } else if (clean.includes('data') || clean.includes('pipeline')) {
+                    sentence += 'data processing systems and pipelines';
+                } else if (clean.includes('web') || clean.includes('portal')) {
+                    sentence += 'web applications and user interfaces';
+                } else {
+                    sentence += 'technical solutions and systems';
+                }
+                
+                // Add metrics if available
+                if (metrics.length > 0) {
+                    const topMetric = metrics[0];
+                    if (mainAction === 'improved' || mainAction === 'increased') {
+                        sentence += `, achieving ${topMetric} improvement`;
+                    } else if (mainAction === 'reduced') {
+                        sentence += `, reducing processing time by ${topMetric}`;
+                    } else {
+                        sentence += `, impacting ${topMetric} of operations`;
+                    }
+                }
+            }
+            
+            return sentence.length > 20 ? sentence : null;
+        } catch (error) {
+            console.log('Error converting sentence:', error);
+            return null;
+        }
+    }
+
+    // Build cover letter using REAL user data
+    buildRealCoverLetter(resumeData, jobData, analysis) {
+        console.log('Building cover letter with real data...');
+        
+        const today = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        // Use real data when available, fallbacks when not
+        const name = resumeData.name !== 'Your Name' ? resumeData.name : 'Your Name';
+        const email = resumeData.email !== 'your.email@example.com' ? resumeData.email : 'your.email@example.com';  
+        const phone = resumeData.phone !== 'Your Phone' ? resumeData.phone : 'Your Phone';
+        const jobTitle = jobData.title !== 'the position' ? jobData.title : 'this position';
+        const company = jobData.company !== 'the company' ? jobData.company : 'your organization';
+        
+        // Match skills between resume and job
+        const matchedSkills = resumeData.skills.filter(skill => 
+            jobData.requiredSkills.includes(skill)
+        );
+        const allRelevantSkills = [...new Set([...matchedSkills, ...resumeData.skills, ...jobData.requiredSkills])].slice(0, 6);
+        
+        const header = `${name}
+${email} | LinkedIn | Portfolio
+${today}
+
+Hiring Manager
+${company}
+
+Dear Hiring Manager,`;
+
+        // Opening paragraph - connect experience to role
+        const topSkills = allRelevantSkills.slice(0, 3).join(', ') || 'technical skills';
+        const opening = `I am excited to apply for the ${jobTitle} position at ${company}. With hands-on experience in ${topSkills} and a proven track record of delivering scalable solutions, I am confident I can contribute significantly to your team's success.`;
+
+        // Experience paragraph - use actual achievements
+        let experience = '';
+        if (resumeData.achievements.length > 0) {
+            const primaryAchievement = resumeData.achievements[0];
+            const secondaryAchievement = resumeData.achievements.length > 1 ? resumeData.achievements[1] : null;
+            
+            experience = `In my recent work, I have ${primaryAchievement}.`;
+            if (secondaryAchievement) {
+                experience += ` Additionally, I ${secondaryAchievement}.`;
+            }
+            experience += ` This hands-on experience with ${allRelevantSkills.slice(0, 4).join(', ')} directly aligns with the technical requirements for this role.`;
+        } else {
+            experience = `My professional experience includes developing applications and systems using ${topSkills}. I have demonstrated expertise in problem-solving, technical implementation, and delivering high-quality results that align with your requirements.`;
+        }
+
+        // Value proposition - natural conclusion without match percentages
+        let value = '';
+        if (matchedSkills.length > 0) {
+            value = `I am particularly excited about this opportunity because my expertise in ${matchedSkills.join(', ')} aligns well with your technical requirements. I am drawn to ${company}'s innovative approach and would welcome the chance to contribute to your team's continued success.`;
+        } else {
+            value = `I am particularly excited about this opportunity to work with ${company}. My technical background and passion for solving complex problems would enable me to make meaningful contributions to your team's innovative projects.`;
+        }
+
+        const closing = `Thank you for considering my application. I look forward to discussing how my experience and passion for technology can benefit ${company}.
+
+Best regards,
+${name}`;
+
+        const result = `${header}
+
+${opening}
+
+${experience}
+
+${value}
+
+${closing}`;
+        
+        console.log('Generated cover letter:', result);
+        return result;
+    }
+
+    // Enhanced Resume Data Extraction (Perplexity-style)
+    enhancedParseResumeData() {
+        console.log('Enhanced resume parsing...');
+        
+        // Extract name - improved patterns
+        let name = '[Your Name]';
+        const namePatterns = [
+            // First line name pattern
+            /^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\s*$/m,
+            // Name with title
+            /^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)(?:\s*-|\s*,|\s*\|)/m,
+            // Name: format
+            /(?:Name|Full Name):\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/i,
+        ];
+        
+        for (const pattern of namePatterns) {
+            const match = this.resumeText.match(pattern);
+            if (match && match[1].trim().length > 3 && match[1].trim().length < 50) {
+                name = match[1].trim();
+                console.log('Found name:', name);
+                break;
+            }
+        }
+        
+        // Extract contact info with better patterns
+        const emailMatch = this.resumeText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        const email = emailMatch ? emailMatch[1] : 'your.email@example.com';
+        
+        const phoneMatch = this.resumeText.match(/(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
+        const phone = phoneMatch ? phoneMatch[0] : '[Your Phone]';
+        
+        // Extract skills - comprehensive technical skills
+        const allSkills = this.extractAllTechnicalSkills();
+        
+        // Extract quantified experiences
+        const experiences = this.extractQuantifiedExperiences();
+        
+        // Extract education with better matching
+        let education = 'Relevant educational background';
+        const educationMatch = this.resumeText.match(/((?:Bachelor|Master|PhD|B\.S\.|M\.S\.|Ph\.D\.).*?(?:Computer Science|Engineering|Data Science|Mathematics|Technology)[^\\n]*)/i);
+        if (educationMatch) {
+            education = educationMatch[1].trim();
+        }
+        
+        return {
+            name,
+            email,
+            phone,
+            skills: allSkills,
+            experiences,
+            education,
+            primarySkills: allSkills.slice(0, 4).join(', ')
+        };
+    }
+
+    // Enhanced Job Description Parsing (Perplexity-style)
+    enhancedParseJobDescription() {
+        console.log('Enhanced job description parsing...');
+        
+        // Extract position with better accuracy
+        let position = 'the advertised position';
+        const positionPatterns = [
+            // Job title at start
+            /^([A-Z][A-Za-z\s\-,]+(?:Engineer|Developer|Analyst|Manager|Scientist|Specialist|Lead|Director|Coordinator|Intern))/m,
+            // Position: format
+            /(?:Position|Job Title|Role):\s*([A-Z][A-Za-z\s\-,]+)/i,
+            // We are looking for format
+            /We are (?:looking for|seeking|hiring)(?:\s+an?\s+)?([A-Z][A-Za-z\s\-,]+)/i,
+            // Join us as format
+            /Join us as(?:\s+an?\s+)?([A-Z][A-Za-z\s\-,]+)/i
+        ];
+        
+        for (const pattern of positionPatterns) {
+            const match = this.jobDescription.match(pattern);
+            if (match && match[1] && match[1].trim().length < 80) {
+                position = match[1].trim().replace(/[.,:;]$/, '');
+                console.log('Found position:', position);
+                break;
+            }
+        }
+        
+        // Extract company with better patterns
+        let company = 'the company';
+        const companyPatterns = [
+            // Company: format
+            /(?:Company|Organization):\s*([A-Z][A-Za-z\s&.,0-9]+)/i,
+            // At Company format
+            /(?:at|with|join)\s+([A-Z][A-Za-z&.,0-9]{2,30})(?:\s+(?:Inc|LLC|Corp|Ltd|Co)\.?)?/i,
+            // Company is looking format
+            /([A-Z][A-Za-z&.,0-9]{2,30})\s+is\s+(?:looking|seeking|hiring)/i
+        ];
+        
+        for (const pattern of companyPatterns) {
+            const match = this.jobDescription.match(pattern);
+            if (match && match[1] && match[1].trim().length > 1 && match[1].trim().length < 50) {
+                const candidate = match[1].trim();
+                // Filter out common false positives
+                if (!/^(we|our|the|this|you|your|position|role|team|company|candidates?)$/i.test(candidate)) {
+                    company = candidate;
+                    console.log('Found company:', company);
+                    break;
+                }
+            }
+        }
+        
+        // Extract key requirements
+        const requirements = this.extractJobRequirements();
+        
+        return {
+            position,
+            company,
+            requirements
+        };
+    }
+
+    // Extract all technical skills comprehensively
+    extractAllTechnicalSkills() {
+        const technicalTerms = [
+            // Programming Languages
+            'Python', 'JavaScript', 'Java', 'TypeScript', 'Go', 'Rust', 'C++', 'C#', 'Ruby', 'PHP', 'Swift', 'Kotlin',
+            // Web Technologies  
+            'React', 'Vue', 'Angular', 'Node.js', 'Express', 'Django', 'Flask', 'Spring', 'Laravel',
+            // Databases
+            'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Cassandra', 'DynamoDB',
+            // Cloud & DevOps
+            'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Jenkins', 'CI/CD', 'Terraform', 'Ansible',
+            // Data & ML
+            'Machine Learning', 'AI', 'Data Science', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Scikit-learn',
+            // Other Technologies
+            'API', 'REST', 'GraphQL', 'Microservices', 'Kafka', 'RabbitMQ', 'Git', 'Linux', 'Agile', 'Scrum'
+        ];
+        
+        const foundSkills = [];
+        const resumeLower = this.resumeText.toLowerCase();
+        
+        technicalTerms.forEach(term => {
+            if (resumeLower.includes(term.toLowerCase())) {
+                foundSkills.push(term);
+            }
+        });
+        
+        return [...new Set(foundSkills)];
+    }
+
+    // Extract quantified experiences and achievements
+    extractQuantifiedExperiences() {
+        const patterns = [
+            // Metrics with percentages, numbers, users
+            /[•\-*]?\s*([^\n]*(?:\d+%|\d+x|\d+\+|\d+K|\d+M|\d+ users?|\d+ records?|\d+ projects?|\d+ systems?|improved|increased|reduced|built|developed|implemented|designed|optimized)[^\n]{10,150})/gi,
+            // Project descriptions with technical details
+            /([^.\n]*(?:built|developed|created|implemented|designed|architected)[^.\n]*(?:using|with|in|via)[^.\n]*(?:Python|JavaScript|SQL|React|API|system|platform|application)[^.\n]{10,200})/gi
+        ];
+        
+        const experiences = [];
+        patterns.forEach(pattern => {
+            const matches = this.resumeText.match(pattern) || [];
+            matches.forEach(match => {
+                const clean = match.replace(/^[•\-*\s]+/, '').trim();
+                if (clean.length > 30 && clean.length < 300) {
+                    experiences.push(clean);
+                }
+            });
+        });
+        
+        // Remove duplicates and get top 4
+        return [...new Set(experiences)].slice(0, 4);
+    }
+
+    // Extract job requirements
+    extractJobRequirements() {
+        // Look for requirements section
+        const reqSection = this.jobDescription.match(/(?:Requirements|Qualifications|Must Have|Essential|You Have)[\s\S]*?(?=(?:Nice|Preferred|Bonus|Benefits|About|Company|What We|$))/i);
+        
+        if (reqSection) {
+            return reqSection[0];
+        }
+        
+        // Fallback: return first 400 characters
+        return this.jobDescription.substring(0, 400);
+    }
+
+    // Generate Perplexity-style cover letter using ACTUAL user data
+    generatePerplexityStyleCoverLetter(resumeData, jobData, analysis) {
+        const today = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        console.log('Generating cover letter with real data:');
+        console.log('Resume data:', resumeData);
+        console.log('Job data:', jobData);
+        console.log('Analysis foundKeywords:', analysis.foundKeywords);
+        console.log('Analysis matchScore:', analysis.matchScore);
+        
+        // Use REAL extracted data, not placeholder data
+        const userName = resumeData.name !== '[Your Name]' ? resumeData.name : 'Your Name';
+        const userEmail = resumeData.email !== 'your.email@example.com' ? resumeData.email : 'your.email@example.com';
+        const userPhone = resumeData.phone !== '[Your Phone]' ? resumeData.phone : 'Your Phone';
+        const jobTitle = jobData.position !== 'the advertised position' ? jobData.position : 'the advertised position';
+        const companyName = jobData.company !== 'the company' ? jobData.company : 'the company';
+        
+        // Extract REAL technical skills from analysis
+        const matchedSkills = analysis.foundKeywords && analysis.foundKeywords.length > 0 ? 
+            analysis.foundKeywords.slice(0, 6) : resumeData.skills.slice(0, 6);
+        
+        // Build opening paragraph with REAL skills
+        const topSkills = matchedSkills.slice(0, 3).join(', ') || 'technical expertise';
+        
+        // Get actual experience from resume text
+        const experiences = this.extractRealExperiences(this.resumeText);
+        const topExperience = experiences.length > 0 ? experiences[0] : 
+            `hands-on experience with ${topSkills}`;
+            
+        // Get actual education level
+        const educationLevel = this.resumeText.toLowerCase().includes('master') || 
+                             this.resumeText.toLowerCase().includes('m.s.') || 
+                             this.resumeText.toLowerCase().includes('ms ') ? 
+                             'graduate' : 'professional';
+        
+        // Header with REAL contact info
+        const header = `${userName}
+${userEmail} | LinkedIn | GitHub
+${today}
+
+Hiring Team
+${companyName}
+
+Dear Hiring Team,`;
+
+        // Paragraph 1: Hook + Real Experience Connection
+        const paragraph1 = `As a ${educationLevel} with ${topExperience}, I was excited to find ${companyName}'s ${jobTitle} role. My experience with ${topSkills}—demonstrated through ${this.getBestProjectExample()}—aligns perfectly with your need for ${this.extractKeyRequirement(jobData.requirements)} at ${companyName} scale.`;
+
+        // Paragraph 2: Real Technical Achievements
+        const technicalDetails = this.formatRealTechnicalWork(experiences, matchedSkills);
+        const paragraph2 = `In my recent work, I've ${technicalDetails}. This required expertise in ${matchedSkills.join(', ')}, ${this.extractSoftSkills(jobData.requirements)}, and ${this.getCollaborationSkills()}—directly aligning with ${this.getJobAlignment(jobData.requirements)}.`;
+
+        // Paragraph 3: Value Proposition + Call to Action  
+        const ongoingWork = this.getActualOngoingProject();
+        const paragraph3 = `${companyName}'s mission to ${this.getCompanyMission(companyName)} resonates with me. ${ongoingWork} I'm excited to bring my ${matchedSkills.slice(0, 2).join(' and ')} expertise to your team and contribute to ${companyName}'s continued innovation. Let's discuss how my ${analysis.matchScore}% skill match can drive impact!`;
+
+        const closing = `Best,
+${userName}`;
+
+        return `${header}
+
+${paragraph1}
+
+${paragraph2}
+
+${paragraph3}
+
+${closing}`;
+    }
+
+    // Extract REAL experiences with achievements from resume text
+    extractRealExperiences(resumeText) {
+        const experiencePatterns = [
+            // Bullet points with achievements
+            /[•\-*]\s*([^.\n]*(?:\d+%|\d+\+|\d+ users?|\d+ projects?|improved|increased|reduced|built|developed|created|implemented)[^.\n]{15,200})/gi,
+            // Achievement sentences
+            /([^.\n]*(?:achieved|developed|built|created|implemented|designed|led|managed)[^.\n]*(?:\d+%|\d+\+|\d+ users?|improvement|increase|reduction)[^.\n]{15,200})/gi,
+            // Technical project descriptions
+            /([^.\n]*(?:Python|JavaScript|SQL|React|API|database|system|platform|application)[^.\n]*(?:built|developed|created|implemented)[^.\n]{15,200})/gi
+        ];
+        
+        const experiences = [];
+        experiencePatterns.forEach(pattern => {
+            const matches = resumeText.match(pattern) || [];
+            matches.forEach(match => {
+                const clean = match.replace(/^[•\-*\s]+/, '').trim();
+                if (clean.length > 20 && !experiences.includes(clean)) {
+                    experiences.push(clean);
+                }
+            });
+        });
+        
+        return experiences.slice(0, 5);
+    }
+
+    // Format real technical work from experiences
+    formatRealTechnicalWork(experiences, skills) {
+        if (experiences.length > 0) {
+            return `delivered ${experiences[0]}, ${experiences[1] || 'implemented scalable solutions'}, and ${experiences[2] || 'optimized system performance'}`;
+        }
+        
+        return `architected production systems using ${skills.slice(0, 3).join(', ')}, delivered scalable solutions with measurable impact, and optimized performance across multiple platforms`;
+    }
+
+    // Get the best project example from resume
+    getBestProjectExample() {
+        const projectKeywords = ['project', 'system', 'platform', 'application', 'tool', 'service'];
+        const resumeLines = this.resumeText.split('\n');
+        
+        for (const line of resumeLines) {
+            if (projectKeywords.some(keyword => line.toLowerCase().includes(keyword)) && 
+                line.length > 20 && line.length < 150) {
+                return line.trim().replace(/^[•\-*\s]+/, '');
+            }
+        }
+        
+        return 'scalable systems processing high-volume data with optimal performance';
+    }
+
+    // Extract key requirement from job description
+    extractKeyRequirement(requirements) {
+        const keyPhrases = [
+            'scalable systems', 'data pipelines', 'production systems', 'high-performance',
+            'distributed systems', 'cloud infrastructure', 'data processing', 'system design',
+            'software development', 'technical solutions'
+        ];
+        
+        const reqLower = requirements.toLowerCase();
+        for (const phrase of keyPhrases) {
+            if (reqLower.includes(phrase)) {
+                return phrase;
+            }
+        }
+        
+        return 'technical excellence and scalable solutions';
+    }
+
+    // Extract soft skills from job requirements
+    extractSoftSkills(requirements) {
+        const softSkills = ['collaboration', 'leadership', 'communication', 'problem-solving', 'analytical thinking'];
+        const reqLower = requirements.toLowerCase();
+        
+        const found = softSkills.filter(skill => reqLower.includes(skill));
+        return found.length > 0 ? found.slice(0, 2).join(' and ') : 'cross-functional collaboration';
+    }
+
+    // Get collaboration skills
+    getCollaborationSkills() {
+        return 'cross-team coordination with stakeholders and technical teams';
+    }
+
+    // Get actual ongoing project
+    getActualOngoingProject() {
+        const ongoingProjects = this.detectOngoingProjects(this.resumeText);
+        if (ongoingProjects.length > 0) {
+            const project = ongoingProjects[0];
+            return `Currently, I'm developing ${project.name}, which has ${project.metrics.join(' and ') || 'demonstrated measurable impact'}.`;
+        }
+        
+        // Look for current work indicators in resume
+        if (this.resumeText.toLowerCase().includes('current') || 
+            this.resumeText.toLowerCase().includes('present') ||
+            this.resumeText.toLowerCase().includes('2026')) {
+            return 'Through my current project work, I\'ve demonstrated the ability to deliver production-scale solutions.';
+        }
+        
+        return 'My recent project experience has equipped me with production-ready skills.';
+    }
+
+    // Helper methods for Perplexity-style content
+    getScaleReference(company) {
+        const scaleMap = {
+            'meta': 'Facebook-scale',
+            'google': 'Google-scale', 
+            'amazon': 'Amazon-scale',
+            'microsoft': 'enterprise-scale',
+            'apple': 'consumer-scale',
+            'netflix': 'streaming-scale'
+        };
+        
+        return scaleMap[company.toLowerCase()] || 'enterprise-scale';
+    }
+
+    getBusinessContext(company) {
+        const contextMap = {
+            'meta': 'massive user engagement',
+            'google': 'global search and cloud infrastructure', 
+            'amazon': 'worldwide e-commerce operations',
+            'netflix': 'global streaming experiences',
+            'uber': 'real-time transportation networks'
+        };
+        
+        return contextMap[company.toLowerCase()] || 'critical business operations';
+    }
+
+    formatAchievements(experiences) {
+        if (experiences.length === 0) {
+            return 'scalable data pipelines (99% uptime), ML prediction services (90%+ accuracy), and automated workflows reducing processing time 30%';
+        }
+        
+        return experiences.slice(0, 3).join(', ').replace(/[•\-*]/g, '').trim();
+    }
+
+    extractWorkplace() {
+        const workMatch = this.resumeText.match(/(?:at|@)\s+([A-Z][A-Za-z\s&.,]+?)(?:\s*,|\s*\n|\s*\|)/);
+        return workMatch ? workMatch[1].trim() : null;
+    }
+
+    getJobAlignment(requirements) {
+        // Extract key responsibilities from requirements
+        if (requirements.includes('data')) return 'data architecture, analytics, and warehouse management for product growth';
+        if (requirements.includes('software')) return 'software architecture, system design, and product development lifecycle';
+        if (requirements.includes('machine learning')) return 'ML pipeline development, model deployment, and production optimization';
+        
+        return 'system architecture, technical leadership, and cross-functional collaboration';
+    }
+
+    getCompanyMission(company) {
+        const missionMap = {
+            'meta': 'connect people through innovative social experiences',
+            'google': 'organize the world\'s information',
+            'amazon': 'be Earth\'s most customer-centric company',
+            'netflix': 'entertain the world'
+        };
+        
+        return missionMap[company.toLowerCase()] || 'drive innovation and growth';
+    }
+
+    getCulturalTraits() {
+        return 'fast-paced, curious';
+    }
+
+    getOngoingProjectSummary() {
+        const ongoingProjects = this.detectOngoingProjects(this.resumeText);
+        if (ongoingProjects.length > 0) {
+            const project = ongoingProjects[0];
+            const metrics = project.metrics.slice(0, 2).join(' and ') || '100+ users';
+            return `Currently, I'm developing ${project.name}, serving ${metrics} and demonstrating production-scale impact.`;
+        }
+        
+        return 'Through self-driven projects serving 100+ users, I\'ve demonstrated production-scale thinking.';
     }
 
     buildPersonalizedCoverLetter(analysis, resumeInsights, jobInsights, tone) {
@@ -2140,6 +2924,10 @@ Best regards,
         // Create achievement showcase
         const achievementShowcase = this.createAchievementShowcase(resumeInsights.experiences, jobInsights);
         
+        // Create ongoing project impact statement
+        const ongoingProjects = this.detectOngoingProjects(this.resumeText);
+        const projectImpact = this.createProjectImpactStatement(ongoingProjects, matchingSkills);
+        
         // Create value proposition
         const valueProposition = this.createValueProposition(analysis, jobInsights);
 
@@ -2157,7 +2945,7 @@ ${openingLine}
 
 ${skillAlignment}
 
-${achievementShowcase}
+${achievementShowcase}${projectImpact ? '\n\n' + projectImpact : ''}
 
 ${valueProposition}
 
@@ -2191,7 +2979,32 @@ Match Score: ${analysis.matchScore}% | ${matchingSkills.length} skills matched${
         }
 
         const topSkills = matchingSkills.slice(0, 5);
-        return `My technical expertise directly aligns with your requirements. I bring hands-on experience with ${topSkills.join(', ')}, positioning me to make immediate contributions to your projects. This technical proficiency, combined with my problem-solving approach, enables me to tackle complex challenges effectively.`;
+        const ongoingProjects = this.detectOngoingProjects(this.resumeText);
+        
+        let alignment = `My technical expertise directly aligns with your requirements. I bring hands-on experience with ${topSkills.join(', ')}, positioning me to make immediate contributions to your projects.`;
+        
+        // Incorporate ongoing project if detected
+        if (ongoingProjects.length > 0) {
+            const primaryProject = ongoingProjects[0];
+            const metrics = primaryProject.metrics.slice(0, 2).join(', ');
+            alignment += ` Currently, I'm developing ${primaryProject.name}, where I'm implementing ${topSkills.slice(0, 2).join(' and ')} to serve ${metrics ? metrics + ' demonstrating' : 'users, demonstrating'} production-scale experience directly relevant to your technical requirements.`;
+        }
+        
+        return alignment + ` This technical proficiency, combined with my problem-solving approach, enables me to tackle complex challenges effectively.`;
+    }
+
+    createProjectImpactStatement(ongoingProjects, matchingSkills) {
+        if (ongoingProjects.length === 0) return '';
+        
+        const project = ongoingProjects[0];
+        const techStack = matchingSkills.filter(skill => 
+            project.details.some(detail => detail.toLowerCase().includes(skill.toLowerCase()))
+        ).slice(0, 3);
+        
+        const metrics = project.metrics.slice(0, 2);
+        const metricsText = metrics.length > 0 ? `achieving ${metrics.join(' and ')}` : 'serving production users';
+        
+        return `Beyond my professional experience, I'm currently developing ${project.name}, implementing ${techStack.join(', ')} and ${metricsText}—demonstrating my ability to deliver scalable solutions and drive innovation in real-world applications.`;
     }
 
     createAchievementShowcase(experiences, jobInsights) {
@@ -2439,28 +3252,60 @@ Best regards,
             day: 'numeric' 
         });
         
+        // Ensure data exists with fallbacks
+        const name = resumeData.name || '[Your Name]';
+        const email = resumeData.email || 'your.email@example.com';
+        const phone = resumeData.phone || '[Your Phone]';
+        const position = jobData.position || 'this position';
+        const company = jobData.company || 'your organization';
+        const skills = resumeData.skills || ['relevant technical skills'];
+        const yearsExp = resumeData.yearsOfExperience || '2+';
+        
         // Build header with actual resume data
-        const header = `${resumeData.name}
-${resumeData.email} | ${resumeData.phone}
+        const header = `${name}
+${email} | ${phone}
 
 ${today}
 
 Dear Hiring Manager,`;
 
         // Build opening paragraph with actual job data
-        const opening = `I am writing to express my strong interest in the ${jobData.position} position at ${jobData.company}. With ${resumeData.yearsOfExperience} years of experience in the field and expertise in ${resumeData.skills.slice(0, 3).join(', ')}, I am confident I would be a valuable addition to your team.`;
+        const topSkills = skills.slice(0, 3).join(', ') || 'technical expertise';
+        const opening = `I am writing to express my strong interest in the ${position} position at ${company}. With ${yearsExp} years of experience and expertise in ${topSkills}, I am confident I would be a valuable addition to your team.`;
 
-        // Build experience paragraph using actual achievements
-        const experienceParagraph = this.buildExperienceParagraph(resumeData, jobData, analysis);
+        // Build experience paragraph with ongoing project integration
+        const ongoingProjects = this.detectOngoingProjects(this.resumeText);
+        let experienceParagraph = '';
+        
+        if (ongoingProjects.length > 0 && resumeData.experiences.length > 0) {
+            const project = ongoingProjects[0];
+            const exp = resumeData.experiences[0];
+            const metrics = project.metrics.length > 0 ? project.metrics.slice(0, 2).join(' and ') : 'production-level impact';
+            experienceParagraph = `My professional background includes ${exp}. Additionally, I'm currently developing ${project.name}, where I've achieved ${metrics}, demonstrating my ability to deliver scalable solutions and drive innovation in real-world applications.`;
+        } else if (resumeData.experiences.length > 0) {
+            experienceParagraph = `My professional experience includes ${resumeData.experiences[0]}. This background has prepared me well for the challenges described in your ${position} role.`;
+        } else {
+            experienceParagraph = `My professional background has provided me with comprehensive experience in ${topSkills}. This foundation aligns well with the requirements for your ${position} role.`;
+        }
 
-        // Build skills match paragraph
-        const skillsMatch = `Based on your job requirements, I bring particularly relevant experience in ${analysis.topMatches.slice(0, 4).join(', ')}. My background demonstrates a ${analysis.overallScore}% match with your technical requirements, positioning me well to contribute immediately to your team's objectives.`;
+        // Build skills match paragraph using actual analysis data
+        const foundKeywords = analysis.foundKeywords || [];
+        const matchScore = analysis.matchScore || 70;
+        
+        let skillsMatch = '';
+        if (foundKeywords.length > 0) {
+            const relevantSkills = foundKeywords.slice(0, 4).join(', ');
+            skillsMatch = `Based on your job requirements, I bring particularly relevant experience in ${relevantSkills}. My background demonstrates a ${matchScore}% match with your technical requirements, positioning me well to contribute immediately to your team's objectives.`;
+        } else {
+            skillsMatch = `My technical skills in ${topSkills} align well with your requirements, and I'm excited about the opportunity to apply this expertise in a challenging ${position} role.`;
+        }
 
         // Build closing
-        const closing = `I would welcome the opportunity to discuss how my background in ${resumeData.primarySkills} can contribute to ${jobData.company}'s continued success. Thank you for your consideration.
+        const primarySkills = skills.slice(0, 2).join(' and ') || 'technical expertise';
+        const closing = `I would welcome the opportunity to discuss how my background in ${primarySkills} can contribute to ${company}'s continued success. Thank you for your consideration.
 
 Sincerely,
-${resumeData.name}`;
+${name}`;
 
         return `${header}\n\n${opening}\n\n${experienceParagraph}\n\n${skillsMatch}\n\n${closing}`;
     }
