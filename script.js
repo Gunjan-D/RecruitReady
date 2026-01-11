@@ -3219,19 +3219,71 @@ Best regards,
             return;
         }
         
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        
-        const today = new Date().toISOString().split('T')[0];
-        a.href = url;
-        a.download = `cover-letter-${today}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.showNotification('Cover letter downloaded!', 'success');
+        try {
+            // Create PDF using jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Set up PDF formatting
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const maxLineWidth = pageWidth - (margin * 2);
+            
+            // Split content into lines that fit the page width
+            const lines = content.split('\n');
+            const wrappedLines = [];
+            
+            lines.forEach(line => {
+                if (line.trim() === '') {
+                    wrappedLines.push('');
+                } else {
+                    const splitLines = doc.splitTextToSize(line, maxLineWidth);
+                    wrappedLines.push(...splitLines);
+                }
+            });
+            
+            // Add text to PDF with proper spacing
+            let yPosition = margin;
+            const lineHeight = 6;
+            
+            wrappedLines.forEach((line, index) => {
+                // Check if we need a new page
+                if (yPosition > pageHeight - margin - lineHeight) {
+                    doc.addPage();
+                    yPosition = margin;
+                }
+                
+                // Set font style based on content
+                if (line.includes('@') || line.includes('Dear') || line.includes('Best regards')) {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(11);
+                } else if (line.trim() && !line.includes('  ')) {
+                    // Headers or names
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(12);
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(11);
+                }
+                
+                doc.text(line, margin, yPosition);
+                yPosition += line.trim() === '' ? lineHeight / 2 : lineHeight;
+            });
+            
+            // Generate filename with current date
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `cover-letter-${today}.pdf`;
+            
+            // Download the PDF
+            doc.save(filename);
+            
+            this.showNotification('Cover letter downloaded as PDF!', 'success');
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            this.showNotification('Error generating PDF. Please try again.', 'error');
+        }
     }
 
     showNotification(message, type = 'success') {
