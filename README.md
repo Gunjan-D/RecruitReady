@@ -207,7 +207,3 @@ Having issues or questions?
 - 📧 Contact: [Create an issue](https://github.com/Gunjan-D/RecruitReady/issues/new)
 
 ---
-
-**⭐ Star this repository if RecruitReady helped you land your dream job!**
-
-*Built with ❤️ for job seekers worldwide*
