@@ -11,9 +11,9 @@ RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-I
 ## Current Development Status
 **Jan 2026 - Present**
 
-- 🔧 **Building**: TF-IDF + OpenAI/Gemini engine matching 50+ resume-job pairs with 90%+ accuracy in <2s
-- 📊 **Deployed**: NLP parsing extracting 15+ data points from unstructured resumes, serving 100+ users via REST APIs  
-- ⚡ **Production**: ATS-optimized scoring (70% keyword + 30% semantic) with real-time analytics workflow
+- **Building**: TF-IDF + OpenAI/Gemini engine matching 50+ resume-job pairs with 90%+ accuracy in <2s
+- **Deployed**: NLP parsing extracting 15+ data points from unstructured resumes, serving 100+ users via REST APIs  
+- **Production**: ATS-optimized scoring (70% keyword + 30% semantic) with real-time analytics workflow
 
 ![RecruitReady Interface](https://img.shields.io/badge/Status-Live-brightgreen) ![JavaScript](https://img.shields.io/badge/JavaScript-75.9%25-yellow) ![CSS](https://img.shields.io/badge/CSS-17.0%25-purple) ![HTML](https://img.shields.io/badge/HTML-7.1%25-orange)
 
