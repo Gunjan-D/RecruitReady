@@ -6,7 +6,7 @@
 
 🌐 **<a href="https://gunjan-d.github.io/RecruitReady/" target="_blank">Try RecruitReady Live</a>** 
 
-RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-IDF + LLM algorithms** to generate ATS-optimized cover letters with production-grade accuracy. Built with Vanilla JavaScript for maximum accessibility and privacy.
+RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-IDF + LLM algorithms** to generate ATS-optimized cover letters with production-grade accuracy. Built with Vanilla JavaScript for maximum accessibility and privacy. Get ready to impress recruiters!
 
 ## Current Development Status
 **Jan 2026 - Present**
