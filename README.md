@@ -8,7 +8,7 @@
 
 RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-IDF + LLM algorithms** to generate ATS-optimized cover letters with production-grade accuracy. Built with Vanilla JavaScript for maximum accessibility and privacy.
 
-## 🚀 Current Development Status
+## Current Development Status
 **Jan 2026 - Present**
 
 - 🔧 **Building**: TF-IDF + OpenAI/Gemini engine matching 50+ resume-job pairs with 90%+ accuracy in <2s
@@ -17,7 +17,7 @@ RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-I
 
 ![RecruitReady Interface](https://img.shields.io/badge/Status-Live-brightgreen) ![JavaScript](https://img.shields.io/badge/JavaScript-75.9%25-yellow) ![CSS](https://img.shields.io/badge/CSS-17.0%25-purple) ![HTML](https://img.shields.io/badge/HTML-7.1%25-orange)
 
-## 🚀 Key Features
+## Key Features
 
 ### 📊 **Advanced Resume-Job Matching**
 - **TF-IDF Algorithm**: Uses Term Frequency-Inverse Document Frequency for semantic text analysis
