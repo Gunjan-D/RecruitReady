@@ -1,4 +1,4 @@
-# 🎯 RecruitReady
+# RecruitReady
 
 **AI Bridge connecting Job Descriptions to optimized Resumes & Cover Letters**
 
@@ -95,7 +95,7 @@ Final Score = (Keyword Score × 0.7) + (Semantic Score × 0.3)
 ATS Optimization = Position Weight × Frequency × Relevance Factor
 ```
 
-## 💡 How It Works
+## How It Works
 
 1. **📄 Upload Resume**: Drag & drop your resume (PDF/TXT format)
 2. **📋 Paste Job Description**: Copy the complete job posting
@@ -150,28 +150,28 @@ php -S localhost:8000
 
 Then visit `http://localhost:8000`
 
-## 🎯 Use Cases
+## Use Cases
 
 - **Job Seekers**: Optimize resumes and create compelling cover letters
 - **Career Counselors**: Help clients improve their application materials
 - **Recruiters**: Understand how ATS systems evaluate candidates
 - **Students**: Learn about professional application best practices
 
-## 📈 Results & Impact
+## Results & Impact
 
 - **Higher Match Scores**: Users typically see 40-60% improvement in ATS scores
 - **Time Savings**: Generate personalized cover letters in under 2 minutes
 - **Professional Quality**: AI-generated content matches professional writing standards
 - **Universal Compatibility**: Works with resumes from any industry or experience level
 
-## 🔐 Privacy & Security
+## Privacy & Security
 
 - **Local Processing**: Resume analysis happens entirely in your browser
 - **No Data Storage**: Your personal information never leaves your device
 - **Optional AI**: Use local generation without sharing data with third parties
 - **Secure API Handling**: API keys stored locally with encryption
 
-## 🚀 Future Enhancements
+## Future Enhancements
 
 - [ ] LinkedIn profile integration
 - [ ] Multi-language support
