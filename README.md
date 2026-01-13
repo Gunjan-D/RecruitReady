@@ -2,8 +2,6 @@
 
 **AI Bridge connecting Job Descriptions to optimized Resumes & Cover Letters**
 
-*Currently Serving 100+ Users | 90%+ Match Accuracy | <2s Response Time*
-
 🌐 **<a href="https://gunjan-d.github.io/RecruitReady/" target="_blank">Try RecruitReady Live</a>** 
 
 RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-IDF + LLM algorithms** to generate ATS-optimized cover letters with production-grade accuracy. Built with Vanilla JavaScript for maximum accessibility and privacy. Get ready to impress recruiters!
@@ -19,25 +17,25 @@ RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-I
 
 ## Key Features
 
-### 📊 **Advanced Resume-Job Matching**
+### **Advanced Resume-Job Matching**
 - **TF-IDF Algorithm**: Uses Term Frequency-Inverse Document Frequency for semantic text analysis
 - **ATS Optimization**: Specialized scoring system that mimics Applicant Tracking System behavior
 - **Position-Based Weighting**: Keywords are weighted based on their importance to specific job roles
 - **Real-time Matching Score**: Get instant feedback on how well your resume matches job requirements
 
-### 🤖 **AI-Powered Cover Letter Generation**
+### **AI-Powered Cover Letter Generation**
 - **Dual-Mode System**: Choose between free local generation or AI-enhanced creation
 - **Universal Resume Parsing**: Works with any resume format - automatically extracts user information
 - **Company-Specific Personalization**: Tailors letters to specific companies and positions
 - **Multiple Tone Options**: Professional, enthusiastic, or balanced writing styles
 
-### 🔧 **Smart Analytics**
+### **Smart Analytics**
 - **Keyword Gap Analysis**: Identifies missing keywords from your resume
 - **Skill Recommendations**: Suggests improvements based on job requirements
 - **ATS Compliance Scoring**: Ensures your application passes automated screening
 - **Visual Progress Indicators**: Clear metrics and improvement suggestions
 
-## 🧠 Algorithm & Logic
+## Algorithm & Logic
 
 ### **5-Step Intelligent Processing Pipeline**
 
@@ -123,7 +121,7 @@ ATS Optimization = Position Weight × Frequency × Relevance Factor
 - **Fallback System**: Local generation ensures functionality without API keys
 - **Cost Optimization**: Smart token usage and caching
 
-## 🔧 Setup & Installation
+## Setup & Installation
 
 ### **Quick Start (No Installation Required)**
 1. Clone this repository
@@ -180,14 +178,14 @@ Then visit `http://localhost:8000`
 - [ ] Advanced analytics dashboard
 - [ ] Resume formatting recommendations
 
-## 📊 Performance Metrics
+## Performance Metrics
 
 - **Loading Time**: < 2 seconds initial load
 - **Processing Speed**: Resume analysis in < 1 second
 - **Accuracy**: 90%+ keyword matching precision
 - **Browser Support**: Modern browsers (Chrome, Firefox, Safari, Edge)
 
-## 🤝 Contributing
+## Contributing
 
 I welcome contributions! Feel free to:
 - Submit bug reports and feature requests
@@ -195,7 +193,7 @@ I welcome contributions! Feel free to:
 - Enhance UI/UX design
 - Add support for new file formats
 
-## 📄 License
+## License
 
 This project is open source.
 
