@@ -189,7 +189,7 @@ Then visit `http://localhost:8000`
 
 ## 🤝 Contributing
 
-We welcome contributions! Feel free to:
+I welcome contributions! Feel free to:
 - Submit bug reports and feature requests
 - Improve algorithms and add new features  
 - Enhance UI/UX design
@@ -197,7 +197,7 @@ We welcome contributions! Feel free to:
 
 ## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is open source.
 
 ## 💬 Support
 
