@@ -204,4 +204,3 @@ Having issues or questions?
 - 💡 [Request features](https://github.com/Gunjan-D/RecruitReady/issues)
 - 📧 Contact: [Create an issue](https://github.com/Gunjan-D/RecruitReady/issues/new)
 
--
