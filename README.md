@@ -197,7 +197,7 @@ I welcome contributions! Feel free to:
 
 This project is open source.
 
-## 💬 Support
+## Support
 
 Having issues or questions? 
 - 🐛 [Report bugs](https://github.com/Gunjan-D/RecruitReady/issues)
