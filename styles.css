@@ -76,6 +76,168 @@ header p {
     font-weight: 500;
 }
 
+/* Value Proposition Section */
+.value-proposition {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.value-proposition h2 {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+.benefits-grid {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 25px 0;
+    flex-wrap: nowrap;
+}
+
+.benefit-item {
+    background: var(--card-background);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    flex: 1;
+    max-width: 300px;
+    min-width: 250px;
+}
+
+.benefit-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.benefit-icon {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+}
+
+.benefit-item h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.benefit-item p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+/* How to Use Section */
+.how-to-use {
+    margin: 50px 0;
+    background: var(--card-background);
+    padding: 40px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.how-to-use h2 {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 30px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.steps-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: nowrap;
+    margin: 30px 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    min-width: 180px;
+    max-width: 220px;
+}
+
+.step-number {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.step-content h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.step-content p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.step-arrow {
+    font-size: 1.3rem;
+    color: var(--primary-color);
+    font-weight: bold;
+    margin: 0 8px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .steps-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .step-arrow {
+        transform: rotate(90deg);
+        margin: 8px 0;
+    }
+    
+    .step {
+        min-width: unset;
+        max-width: unset;
+        width: 100%;
+    }
+    
+    .benefits-grid {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .benefit-item {
+        padding: 15px;
+        min-width: unset;
+        max-width: unset;
+    }
+    
+    .how-to-use {
+        padding: 30px 20px;
+    }
+}
+
 .tech-stack {
     display: flex;
     flex-wrap: wrap;
