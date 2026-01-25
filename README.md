@@ -200,7 +200,7 @@ This project is open source.
 ## Support
 
 Having issues or questions? 
-- 🐛 [Report bugs](https://github.com/Gunjan-D/RecruitReady/issues)
+-  [Report bugs](https://github.com/Gunjan-D/RecruitReady/issues)
 - 💡 [Request features](https://github.com/Gunjan-D/RecruitReady/issues)
 - 📧 Contact: [Create an issue](https://github.com/Gunjan-D/RecruitReady/issues/new)
 
