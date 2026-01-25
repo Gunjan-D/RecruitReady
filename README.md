@@ -2,7 +2,7 @@
 
 **AI Bridge connecting Job Descriptions to optimized Resumes & Cover Letters**
 
-🌐 **<a href="https://gunjan-d.github.io/RecruitReady/" target="_blank">Try RecruitReady Live</a>** 
+ **<a href="https://gunjan-d.github.io/RecruitReady/" target="_blank">Try RecruitReady Live</a>** 
 
 RecruitReady is an advanced resume-job matching platform that uses **hybrid TF-IDF + LLM algorithms** to generate ATS-optimized cover letters with production-grade accuracy. Built with Vanilla JavaScript for maximum accessibility and privacy. Get ready to impress recruiters!
 
@@ -95,11 +95,11 @@ ATS Optimization = Position Weight × Frequency × Relevance Factor
 
 ## How It Works
 
-1. **📄 Upload Resume**: Drag & drop your resume (PDF/TXT format)
-2. **📋 Paste Job Description**: Copy the complete job posting
-3. **⚡ Instant Analysis**: Get detailed matching scores and insights
-4. **📝 Generate Cover Letter**: Choose your preferred tone and generation mode
-5. **🎯 Optimize & Apply**: Use recommendations to improve your application
+1. ** Upload Resume**: Drag & drop your resume (PDF/TXT format)
+2. ** Paste Job Description**: Copy the complete job posting
+3. ** Instant Analysis**: Get detailed matching scores and insights
+4. ** Generate Cover Letter**: Choose your preferred tone and generation mode
+5. ** Optimize & Apply**: Use recommendations to improve your application
 
 ## 🛠 Technical Implementation
 
