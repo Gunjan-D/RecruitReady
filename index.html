@@ -136,6 +136,11 @@
 
                 <div class="upload-card">
                     <h2>Job Description</h2>
+                    <div class="job-url-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <input type="url" id="jobUrlInput" placeholder="Paste job posting URL (e.g., https://careers.example.com/job/123)" style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;">
+                        <button id="fetchJobBtn" class="secondary-btn" style="white-space:nowrap;padding:8px 12px;border-radius:6px;">Fetch JD</button>
+                    </div>
+                    <p style="margin-top:0;margin-bottom:8px;font-size:0.9rem;color:#555;"><small>Tip: You can paste a public job posting URL and RecruitReady will try to extract the job description text automatically. Some sites may block automated fetching.</small></p>
                     <textarea id="jobDescription" placeholder="Paste the job description here..." rows="15"></textarea>
                     <p><small>💡 Tip: Include the full job description with requirements and qualifications for better matching</small></p>
                 </div>

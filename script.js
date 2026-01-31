@@ -24,6 +24,8 @@ class RecruitReadyAnalyzer {
         const resumeDropArea = document.getElementById('resumeDropArea');
         const browseLink = resumeDropArea.querySelector('.browse-link');
         const jobDescTextarea = document.getElementById('jobDescription');
+        const jobUrlInput = document.getElementById('jobUrlInput');
+        const fetchJobBtn = document.getElementById('fetchJobBtn');
         const resumeTextArea = document.getElementById('resumeTextArea');
         const analyzeBtn = document.getElementById('analyzeBtn');
         const generateCoverLetterBtn = document.getElementById('generateCoverLetterBtn');
@@ -41,6 +43,24 @@ class RecruitReadyAnalyzer {
 
         // Job description input
         jobDescTextarea.addEventListener('input', this.checkInputs.bind(this));
+        // Fetch job description from URL
+        if (fetchJobBtn && jobUrlInput) {
+            fetchJobBtn.addEventListener('click', () => {
+                const url = jobUrlInput.value.trim();
+                if (!url) {
+                    this.showNotification('Please enter a job posting URL first', 'error');
+                    return;
+                }
+                this.fetchJobDescriptionFromUrl(url);
+            });
+
+            jobUrlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    fetchJobBtn.click();
+                }
+            });
+        }
         
         // Resume text area input
         resumeTextArea.addEventListener('input', (e) => {
@@ -181,6 +201,57 @@ class RecruitReadyAnalyzer {
         } catch (error) {
             console.error('PDF extraction error:', error);
             throw new Error(`Failed to extract text from PDF: ${error.message}`);
+        }
+    }
+
+    async fetchJobDescriptionFromUrl(rawUrl) {
+        try {
+            const fetchBtn = document.getElementById('fetchJobBtn');
+            const jobUrlInput = document.getElementById('jobUrlInput');
+
+            // Normalize and validate URL
+            let url = rawUrl.trim();
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+            }
+
+            // Show loading state
+            if (fetchBtn) {
+                fetchBtn.disabled = true;
+                const originalText = fetchBtn.innerText;
+                fetchBtn.innerText = 'Fetching...';
+
+                try {
+                    // Use r.jina.ai extractor which returns cleaned text and works around CORS
+                    const cleanedTarget = url.replace(/^https?:\/\//i, '');
+                    const apiUrl = `https://r.jina.ai/http://${cleanedTarget}`;
+
+                    const resp = await fetch(apiUrl);
+                    if (!resp.ok) throw new Error(`Failed to fetch (status ${resp.status})`);
+
+                    const text = await resp.text();
+                    const trimmed = text.trim();
+
+                    if (!trimmed || trimmed.length < 50) {
+                        this.showNotification('Fetched content is very short or empty. Try pasting the JD manually.', 'warning');
+                    }
+
+                    // Put text into textarea and update state
+                    const jobDescTextarea = document.getElementById('jobDescription');
+                    if (jobDescTextarea) {
+                        jobDescTextarea.value = trimmed;
+                    }
+                    this.jobDescription = trimmed;
+                    this.showNotification('Job description fetched successfully!', 'success');
+                    this.checkInputs();
+                } finally {
+                    fetchBtn.disabled = false;
+                    fetchBtn.innerText = originalText;
+                }
+            }
+        } catch (error) {
+            console.error('Fetch JD error:', error);
+            this.showNotification('Unable to fetch job description. Site may block scraping or the URL is invalid.', 'error');
         }
     }
 
