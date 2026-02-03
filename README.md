@@ -192,7 +192,8 @@ I welcome contributions! Feel free to:
 - Improve algorithms and add new features  
 - Enhance UI/UX design
 - Add support for new file formats
-////////////////
+///////////////
+///////////////////////////////////////////////////////////////////////////////////////////
 ## License
 
 This project is open source.
