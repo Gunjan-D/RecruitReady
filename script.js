@@ -274,15 +274,15 @@ class RecruitReadyAnalyzer {
             this.showNotification('Please upload your resume and enter the job description', 'error');
             return;
         }
-
-        // Show results section
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-
-        // Use advanced TF-IDF based matching
-        const analysis = this.performAdvancedMatching();
-        this.displayResults(analysis);
-        this.generateEnhancedRecommendations(analysis);
+        const result = rrScore(this.resumeText, this.jobDescription);
+        rrRender(result);
+        this.generateEnhancedRecommendations({
+            matchScore: result.score,
+            foundKeywords: result.kwTable.filter(k=>k.inResume).map(k=>k.word),
+            missingKeywords: result.kwTable.filter(k=>!k.inResume).map(k=>({keyword:k.word,weight:1.5,section:'general',priority:'Medium'}))
+        });
     }
 
     performAdvancedMatching() {
@@ -3471,3 +3471,252 @@ Sincerely,
 document.addEventListener('DOMContentLoaded', () => {
     new RecruitReadyAnalyzer();
 });
+// ================================================================
+// RECRUITREADY ENGINE v8
+// Fixed: no garbage trigrams, proper acronym handling, extended
+// stop list removes Work/Help/Including/LIKE/CALL/Increase etc.
+// Scoring: frequency-weighted kw match + TF-IDF cosine
+// ================================================================
+
+const RR_STOP = new Set([
+    'the','and','or','but','in','on','at','to','for','of','with','by','is','are','was','were',
+    'be','been','being','have','has','had','do','does','did','will','would','could','should',
+    'may','might','must','can','this','that','these','those','a','an','we','our','your','you',
+    'they','their','it','its','all','from','as','not','also','which','who','how','what','when',
+    'where','there','here','each','any','some','into','about','than','other','over','after',
+    'before','up','out','if','then','so','both','through','during','below','above','between',
+    'under','again','further','just','because','while','although','however','per','via',
+    'work','working','worked','worker','help','helping','helped',
+    'include','including','included','includes','learn','learning','learned',
+    'practice','practices','student','students','intern','interns','internship',
+    'hours','hour','days','day','week','weeks','month','months','year','years',
+    'time','times','period','full','part','half','type','types','kind','kinds',
+    'job','jobs','role','roles','position','positions','post','posts',
+    'skill','skills','ability','abilities','experience','experiences','background',
+    'knowledge','understanding','awareness','familiarity','proficiency','expertise',
+    'competency','competencies','qualification','qualifications',
+    'company','companies','organization','organizations','firm','firms',
+    'business','businesses','enterprise','enterprises','employer','employers',
+    'service','services','product','products','project','projects',
+    'program','programs','system','systems','process','processes',
+    'tool','tools','platform','platforms','solution','solutions',
+    'team','teams','group','groups','member','members','staff',
+    'operations','operation','communication','communications',
+    'language','languages','make','making','made','use','using','used',
+    'build','building','built','create','creating','created',
+    'develop','developing','developed','provide','providing','provided',
+    'support','supporting','supported','manage','managing','managed',
+    'ensure','ensuring','maintain','maintaining','drive','driving','led',
+    'lead','leading','run','running','ran','looking','seeking','hiring',
+    'required','requirement','requirements','preferred','optional',
+    'responsible','responsibility','responsibilities','duty','duties',
+    'opportunity','opportunities','candidate','candidates',
+    'apply','application','applications','submit','equal','employer',
+    'race','color','religion','sex','national','origin','disability',
+    'status','protected','veteran','characteristic','degree','education',
+    'training','graduate','undergraduate','fast','quickly','effectively',
+    'efficiently','successfully','currently','previously','recently',
+    'immediately','directly','independently','collaboratively','proactively',
+    'various','multiple','different','similar','related','relevant',
+    'following','given','based','across','within','among','plus','bonus',
+    'additional','extra','key','main','primary','general','specific',
+    'standard','common','typical','regular','able','capable','capacity',
+    'information','report','results','impact','value','area','areas',
+    'level','levels','pay','rate','salary','starting','competitive',
+    'strong','excellent','outstanding','exceptional','proven','demonstrated',
+    'total','number','amount','set','get','got','put','take','give',
+    'come','go','see','know','think','say','want','need','look',
+    'right','own','way','case','point','place','thing','person','people',
+    'new','old','good','great','best','top','high','low','large','small',
+    'big','real','world','cutting','edge','state','local','global',
+    'international','domestic','foreign','fast','rapidly','successfully',
+    'hands','end','cross','functional','number','like','call','increase',
+    'digital','trusted','worldwide','renowned','brands','cologne',
+    'specializing','alerting','incident','uptime','diverse','inclusive',
+    'join','become','part','impact','mission','vision','values','culture',
+    'growth','career','advancement','benefits','perks','offices','office',
+    'location','remote','hybrid','onsite','flexible','schedule',
+    'discrimination','harassment','compensation','salary','wage','paid',
+    'looking','seeking','help','require','need','want','able',
+    'machine','programming','fluency','speaking','written','verbal',
+    'excellent','strong','proficient','familiar','knowledge','understanding',
+    'including','regarding','minimum','maximum','average','performance',
+    'efficiency','effectiveness','number','set','type','well','very',
+    'highly','also','even','way','ways','bertelsmann','ikea','rewe',
+    'worldwide','renowned','trusted','brands','cologne','trusted'
+]);
+
+const RR_ACRONYMS = new Set([
+    'ai','ml','nlp','llm','rag','sql','css','api','sdk','aws','gcp','b2b','b2c',
+    'saas','paas','iaas','rest','grpc','ci','cd','tdd','bdd','ux','ui','pmp',
+    'crm','erp','seo','sem','roi','kpi','okr','gdpr','hipaa','sox','pci','iso',
+    'itil','rust','vue','git','npm','ios','php','go','hr','pr','qa','ba','pm',
+    'java','ruby','perl','swift','scala','kotlin','bash','html','json','yaml',
+    'xml','tcp','ip','dns','cdn','vpn','ssl','tls','http','jwt','oauth','r',
+    'devops','mlops','fintech','edtech','cto','ceo','cio','cmo','vp','svp','evp',
+    'k8s','aws','gcp','llm','rag','rl','cv','ocr','asr','tts','etl','elt','bi'
+]);
+
+function rrExtractKeywords(text) {
+    // Tokenize preserving tech terms like C++, C#, .NET, Node.js
+    const tokens = text.replace(/[^a-zA-Z0-9\s.#+\-/]/g, ' ')
+        .split(/\s+/).map(w => w.trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g,'')).filter(w => w.length > 0);
+
+    // Filter: keep meaningful tokens only
+    const keep = tokens.filter(w => {
+        const low = w.toLowerCase().replace(/[^a-z0-9+#.]/g,'');
+        if (!low || /^\d+$/.test(low)) return false;
+        if (low.length === 1) return false;
+        if (low.length === 2) return RR_ACRONYMS.has(low);
+        if (low.length === 3) return RR_ACRONYMS.has(low) || (!RR_STOP.has(low) && !/^[a-z]{3}$/.test(low) || RR_ACRONYMS.has(low));
+        return !RR_STOP.has(low);
+    });
+
+    // Single word frequencies
+    const freq = {};
+    keep.forEach(w => {
+        const k = w.toLowerCase().replace(/[^a-z0-9+#.]/g,'');
+        if (k && k.length > 1) freq[k] = (freq[k]||0) + 1;
+    });
+
+    // Bigrams: only between two meaningful adjacent tokens (both > 3 chars, not stop)
+    const biFreq = {};
+    const keepLow = keep.map(w => w.toLowerCase().replace(/[^a-z0-9+#.]/g,''));
+    for (let i = 0; i < keepLow.length - 1; i++) {
+        const a = keepLow[i], b = keepLow[i+1];
+        if (a.length > 3 && b.length > 3 && !RR_STOP.has(a) && !RR_STOP.has(b)) {
+            const bg = a + ' ' + b;
+            biFreq[bg] = (biFreq[bg]||0) + 1;
+        }
+    }
+
+    // Merge bigrams (freq >= 2) into combined, replacing their single words
+    const combined = {...freq};
+    Object.entries(biFreq)
+        .filter(([,c]) => c >= 2)
+        .sort((a,b) => b[1]-a[1])
+        .forEach(([bg,c]) => {
+            combined[bg] = c;
+            bg.split(' ').forEach(w => {
+                if (combined[w] && combined[bg] >= combined[w]) delete combined[w];
+            });
+        });
+
+    return Object.entries(combined)
+        .filter(([w]) => {
+            const parts = w.split(' ');
+            return parts.every(p => p.length > 1 && !RR_STOP.has(p)) && w.length > 1;
+        })
+        .sort((a,b) => b[1]-a[1])
+        .slice(0, 25);
+}
+
+function rrScore(resume, jd) {
+    const rawKws = rrExtractKeywords(jd);
+    const resLow = resume.toLowerCase();
+
+    // Build kwTable with inResume flag
+    const kwTable = rawKws.map(([word, freq]) => {
+        const display = word.split(' ').map(w => {
+            if (RR_ACRONYMS.has(w) && w.length <= 5) return w.toUpperCase();
+            return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
+        return {
+            word: display,
+            wordLow: word,
+            freq,
+            inResume: new RegExp('\\b' + word.replace(/[-.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'i').test(resume)
+        };
+    });
+
+    // Frequency-weighted keyword score
+    const totalW = kwTable.reduce((s,k) => s+k.freq, 0) || 1;
+    const foundW = kwTable.filter(k=>k.inResume).reduce((s,k) => s+k.freq, 0);
+    const kwPct  = foundW / totalW;
+
+    // TF-IDF cosine similarity
+    const jdTokens = jd.replace(/[^a-zA-Z0-9\s]/g,' ').split(/\s+/).map(w=>w.toLowerCase()).filter(w=>w.length>2);
+    const resTokens= resume.replace(/[^a-zA-Z0-9\s]/g,' ').split(/\s+/).map(w=>w.toLowerCase()).filter(w=>w.length>2);
+    const vocab=[...new Set([...jdTokens,...resTokens])];
+    const jdF={},resF={};
+    jdTokens.forEach(w=>{jdF[w]=(jdF[w]||0)+1;});
+    resTokens.forEach(w=>{resF[w]=(resF[w]||0)+1;});
+    let dot=0,nJ=0,nR=0;
+    vocab.forEach(w=>{const j=(jdF[w]||0)/Math.max(jdTokens.length,1),r=(resF[w]||0)/Math.max(resTokens.length,1);dot+=j*r;nJ+=j*j;nR+=r*r;});
+    const cosine=(nJ&&nR)?dot/(Math.sqrt(nJ)*Math.sqrt(nR)):0;
+
+    // Combined score: power curve gives natural spread across 0-97
+    const raw = (kwPct*0.65) + (cosine*0.35);
+    const score = Math.min(Math.round(Math.pow(raw,0.65)*97), 97);
+
+    // Hard skills
+    const hsPatterns=[
+        /\b(Python|JavaScript|TypeScript|Java|C\+\+|C#|Go|Golang|Rust|Ruby|PHP|Swift|Kotlin|Scala|SQL|HTML|CSS|Bash|MATLAB|Perl|Haskell|Elixir|R\b)\b/gi,
+        /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|FastAPI|TensorFlow|PyTorch|scikit-learn|Pandas|NumPy|Docker|Kubernetes|Jenkins|Git|AWS|Azure|GCP|Terraform|Linux|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Kafka|Spark|Airflow|dbt|Snowflake)\b/gi,
+        /\b(MS Office|Microsoft Office|OneDrive|Zoom|SharePoint|Teams|Salesforce|QuickBooks|SAP|Jira|Figma|Tableau|Power BI|Excel|Word|PowerPoint|Slack|Notion|Confluence|HubSpot)\b/gi,
+        /\b(Machine Learning|Deep Learning|NLP|Natural Language Processing|Computer Vision|Data Science|Generative AI|LLM|Large Language Models|Reinforcement Learning|RAG|Embeddings|Transformers|BERT|GPT)\b/gi,
+        /\b(SaaS|B2B|B2C|API|SDK|CI\/CD|DevOps|MLOps|Agile|Scrum|Kanban|TDD|BDD|SOLID|OAuth|JWT|REST|GraphQL|gRPC|OpenAPI|WebSocket)\b/gi,
+        /\b(teaching|tutoring|curriculum|instruction|assessment|classroom|certified|certificate|licensure|K-8|K-12|elementary|secondary|STEM|nursing|clinical|healthcare|medical|therapy|counseling|marketing|sales|CRM|SEO|SEM|accounting|finance|audit|compliance|legal|cybersecurity|UX|UI|PMP|Six Sigma|ITIL|HIPAA|GDPR)\b/gi,
+    ];
+    const hsSet=new Set();
+    hsPatterns.forEach(p=>(jd.match(p)||[]).forEach(m=>hsSet.add(m.trim())));
+    const hardSkills=[...hsSet].map(s=>({
+        skill:s,
+        inResume:new RegExp('\\b'+s.replace(/[-.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(resume),
+        freq:(jd.match(new RegExp(s.replace(/[-.*+?^${}()|[\]\\]/g,'\\$&'),'gi'))||[]).length
+    })).filter(s=>s.freq>0).sort((a,b)=>b.freq-a.freq);
+
+    // Soft skills
+    const softList=['communication','leadership','collaboration','teamwork','problem solving','analytical','mentoring','coaching','cross-functional','stakeholder','initiative','ownership','adaptable','organized','motivated','enthusiastic','dedicated','commitment','professional development','supervision','planning','coordination','innovative','creative','detail oriented','detail-oriented','prioritize','independent','reliable','flexible','self-starter','critical thinking','decision making','negotiation','presentation','interpersonal','empathy','curiosity','proactive'];
+    const softSkills=softList.map(t=>{const esc=t.replace(/[-.*+?^${}()|[\]\\]/g,'\\$&');const f=(jd.match(new RegExp(esc,'gi'))||[]).length;return f>0?{skill:t,freq:f,inResume:new RegExp(esc,'i').test(resume)}:null;}).filter(Boolean).sort((a,b)=>b.freq-a.freq);
+
+    // Job title check
+    const fl=jd.split('\n')[0].toLowerCase();
+    const tw=fl.split(/\s+/).filter(w=>w.length>3&&!RR_STOP.has(w));
+    const titleOk=tw.length>0&&tw.filter(w=>resLow.includes(w)).length>=Math.ceil(tw.length*0.4);
+
+    const kwFound=kwTable.filter(k=>k.inResume).length;
+    const hsFoundN=hardSkills.filter(s=>s.inResume).length;
+    const ssFoundN=softSkills.filter(s=>s.inResume).length;
+
+    return {score,kwTable,hardSkills,softSkills,titleOk,
+        kwFound,kwTotal:kwTable.length,kwPctDisplay:Math.round(kwPct*100),
+        hsPctDisplay:hardSkills.length?Math.round(hsFoundN/hardSkills.length*100):0,
+        ssPctDisplay:softSkills.length?Math.round(ssFoundN/softSkills.length*100):0,
+        hsFoundN,hsTotal:hardSkills.length,ssFoundN,ssTotal:softSkills.length};
+}
+
+function rrRender(a) {
+    const score=a.score;
+    const color=score>=70?'#16a34a':score>=50?'#d97706':'#e11d48';
+    const bg=score>=70?'#f0fdf4':score>=50?'#fffbeb':'#fff1f2';
+    const msg=score>=85?'<b style="color:#16a34a;">Great match!</b> Your resume is well targeted to this job description.':score>=70?'<b style="color:#2563eb;">Good match.</b> A few keyword additions will boost your score further.':'<b style="color:#e11d48;">Needs improvement.</b> Your resume is missing keywords and skills and is <em>not</em> well targeted to the job description. This could result in your resume not getting past automated screening software and recruiters.<br><br>We\'ve outlined the important skills below to include. You should aim for a score of at least 85.';
+    const R=70,C=2*Math.PI*R,dash=(score/100)*C;
+    const svg=`<svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="${R}" fill="none" stroke="#e2e8f0" stroke-width="14"/><circle cx="85" cy="85" r="${R}" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash.toFixed(1)} ${(C-dash).toFixed(1)}" stroke-dashoffset="${(C/4).toFixed(1)}" stroke-linecap="round" transform="rotate(-90 85 85)"/><text x="85" y="78" text-anchor="middle" font-size="40" font-weight="900" fill="${color}">${score}</text><text x="85" y="102" text-anchor="middle" font-size="12" fill="#64748b">out of 100</text></svg>`;
+    const kwRows=a.kwTable.map(k=>`<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:9px 8px;font-size:.88rem;">${k.inResume?'<span style="color:#16a34a;font-weight:700;margin-right:6px;">✓</span><span style="color:#166534;font-weight:600;">'+k.word+'</span>':'<span style="color:#e11d48;font-weight:700;margin-right:6px;">✗</span><span style="color:#e11d48;">'+k.word+'</span>'}</td><td style="text-align:center;padding:9px 6px;font-size:.88rem;font-weight:600;color:#64748b;">${k.freq}</td><td style="text-align:center;padding:9px 6px;color:#f59e0b;font-size:1.1rem;">★</td></tr>`).join('');
+    const missChips=a.kwTable.filter(k=>!k.inResume).slice(0,15).map(k=>`<span style="display:inline-block;margin:3px;padding:3px 11px;border-radius:14px;font-size:.82rem;font-weight:600;background:#fee2e2;color:#991b1b;">${k.word}</span>`).join('');
+    const chip=(s,ok)=>`<span style="display:inline-block;margin:3px;padding:4px 13px;border-radius:20px;font-size:.82rem;font-weight:600;background:${ok?'#dcfce7':'#fee2e2'};color:${ok?'#166534':'#991b1b'};border:1px solid ${ok?'#bbf7d0':'#fecaca'};">${s}</span>`;
+    const schip=(s,ok)=>`<span style="display:inline-block;margin:3px;padding:4px 13px;border-radius:20px;font-size:.82rem;background:${ok?'#dcfce7':'#fef9c3'};color:${ok?'#166534':'#854d0e'};border:1px solid ${ok?'#bbf7d0':'#fde68a'};">${s}</span>`;
+    const bar=(lbl,v,sub)=>{const c=v>=70?'#16a34a':v>=50?'#d97706':'#e11d48';return`<div style="background:#fff;border-radius:8px;padding:12px 14px;border:1px solid #e2e8f0;"><div style="font-size:.73rem;color:#64748b;font-weight:700;text-transform:uppercase;">${lbl}</div><div style="font-size:1.3rem;font-weight:900;color:${c};">${v}%</div><div style="font-size:.72rem;color:#94a3b8;">${sub}</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;overflow:hidden;"><div style="width:${v}%;background:${c};height:100%;border-radius:4px;"></div></div></div>`;};
+    const hsFound=a.hardSkills.filter(s=>s.inResume),hsMiss=a.hardSkills.filter(s=>!s.inResume);
+    const ssFound=a.softSkills.filter(s=>s.inResume),ssMiss=a.softSkills.filter(s=>!s.inResume);
+    const html=`<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin-top:28px;background:#fff;border-radius:16px;border:1.5px solid #e2e8f0;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);"><div style="display:flex;align-items:flex-start;gap:28px;padding:28px 32px;flex-wrap:wrap;background:${bg};border-bottom:1px solid #e2e8f0;"><div style="flex-shrink:0;text-align:center;">${svg}<div style="font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-top:-6px;letter-spacing:.05em;">RELEVANCY SCORE</div></div><div style="flex:1;min-width:220px;padding-top:8px;"><div style="font-size:.97rem;color:#334155;line-height:1.75;">${msg}</div><div style="display:flex;flex-wrap:wrap;margin-top:18px;border-bottom:2px solid #e2e8f0;"><button onclick="rrT('kw')" id="rrtb-kw" style="padding:8px 15px;font-size:.81rem;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid #4f46e5;color:#4f46e5;">🔍 KEYWORDS</button><button onclick="rrT('hs')" id="rrtb-hs" style="padding:8px 15px;font-size:.81rem;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:#64748b;">💪 HARD SKILLS</button><button onclick="rrT('ss')" id="rrtb-ss" style="padding:8px 15px;font-size:.81rem;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:#64748b;">🤝 SOFT SKILLS</button><button onclick="rrT('jt')" id="rrtb-jt" style="padding:8px 15px;font-size:.81rem;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:#64748b;">🏷️ JOB TITLE ${a.titleOk?'✅':'❌'}</button></div></div></div><div id="rrtc-kw" style="padding:24px 32px;"><p style="color:#64748b;font-size:.85rem;margin-bottom:14px;">Keywords from the job description ranked by frequency. ✓ = found in your resume. Add the ✗ missing ones to improve your score.</p><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8fafc;"><th style="padding:8px;text-align:left;font-size:.77rem;color:#64748b;font-weight:700;border-bottom:2px solid #e2e8f0;">KEYWORD OR SKILL</th><th style="padding:8px 6px;text-align:center;font-size:.77rem;color:#64748b;font-weight:700;border-bottom:2px solid #e2e8f0;">COUNT</th><th style="padding:8px 6px;text-align:center;font-size:.77rem;color:#64748b;font-weight:700;border-bottom:2px solid #e2e8f0;">KEY SKILL</th></tr></thead><tbody>${kwRows}</tbody></table>${missChips?`<div style="margin-top:14px;padding:12px 16px;background:#fef2f2;border-radius:10px;border-left:4px solid #e11d48;"><b style="color:#e11d48;">❌ Missing — add these to your resume:</b><div style="margin-top:8px;">${missChips}</div></div>`:'<div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;color:#16a34a;font-weight:600;">✅ All top keywords found!</div>'}</div><div id="rrtc-hs" style="padding:24px 32px;display:none;"><p style="color:#64748b;font-size:.85rem;margin-bottom:14px;">Specific technical and domain skills from the job description.</p>${hsFound.length?`<div style="margin-bottom:14px;"><b style="color:#16a34a;">✅ Found (${hsFound.length})</b><div style="margin-top:8px;">${hsFound.map(s=>chip(s.skill,true)).join('')}</div></div>`:''}${hsMiss.length?`<div><b style="color:#e11d48;">❌ Missing (${hsMiss.length})</b><div style="margin-top:8px;">${hsMiss.map(s=>chip(s.skill,false)).join('')}</div></div>`:'<div style="color:#16a34a;font-weight:600;margin-top:8px;">✅ All hard skills covered!</div>'}${!a.hardSkills.length?'<div style="color:#64748b;font-style:italic;">No specific technical skills detected.</div>':''}</div><div id="rrtc-ss" style="padding:24px 32px;display:none;"><p style="color:#64748b;font-size:.85rem;margin-bottom:14px;">Interpersonal and professional qualities from the job description.</p>${ssFound.length?`<div style="margin-bottom:14px;"><b style="color:#16a34a;">✅ Found (${ssFound.length})</b><div style="margin-top:8px;">${ssFound.map(s=>schip(s.skill,true)).join('')}</div></div>`:''}${ssMiss.length?`<div><b style="color:#d97706;">⚠️ Missing (${ssMiss.length})</b><div style="margin-top:8px;">${ssMiss.map(s=>schip(s.skill,false)).join('')}</div></div>`:''}${!a.softSkills.length?'<div style="color:#64748b;font-style:italic;">No specific soft skills detected.</div>':''}</div><div id="rrtc-jt" style="padding:24px 32px;display:none;">${a.titleOk?'<div style="background:#f0fdf4;border-radius:10px;padding:16px;border-left:4px solid #16a34a;"><b style="color:#16a34a;font-size:1rem;">✅ Job Title Found</b><div style="color:#334155;margin-top:6px;font-size:.9rem;">Your resume contains keywords matching the job title.</div></div>':'<div style="background:#fef2f2;border-radius:10px;padding:16px;border-left:4px solid #e11d48;"><b style="color:#e11d48;font-size:1rem;">❌ Job Title Missing</b><div style="color:#334155;margin-top:6px;font-size:.9rem;">Add the job title to your Summary or headline. ATS systems filter by title match.</div></div>'}</div><div style="padding:18px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;"><div style="font-weight:700;color:#1e293b;margin-bottom:10px;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;">Score Breakdown</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">${bar('Keywords',a.kwPctDisplay,`${a.kwFound}/${a.kwTotal} matched`)}${bar('Hard Skills',a.hsPctDisplay,`${a.hsFoundN}/${a.hsTotal} matched`)}${bar('Soft Skills',a.ssPctDisplay,`${a.ssFoundN}/${a.ssTotal} matched`)}${bar('Job Title',a.titleOk?85:20,a.titleOk?'Found ✓':'Missing ✗')}</div></div></div>`;
+    ['rw-main-panel-wrap','rr-main-panel-wrap','rw-panel-v3-wrap','rw-panel-wrap','rw-panel'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove();});
+    const kwCard=document.querySelector('.keywords-card');if(kwCard)kwCard.style.display='none';
+    const sc=document.getElementById('matchScore');if(sc)sc.textContent=a.score+'%';
+    const circle=document.querySelector('.score-circle');if(circle)circle.style.background=`conic-gradient(var(--primary-color) ${(a.score/100)*360}deg, var(--border-color) ${(a.score/100)*360}deg)`;
+    const wrap=document.createElement('div');wrap.id='rr-main-panel-wrap';wrap.innerHTML=html;
+    const rec=document.querySelector('.recommendations-section');
+    if(rec)rec.parentNode.insertBefore(wrap,rec);
+    else document.getElementById('resultsSection').appendChild(wrap);
+}
+
+window.rrT=function(tab){
+    ['kw','hs','ss','jt'].forEach(t=>{
+        const c=document.getElementById('rrtc-'+t),b=document.getElementById('rrtb-'+t);
+        if(!c||!b)return;
+        c.style.display=t===tab?'block':'none';
+        b.style.borderBottom=t===tab?'3px solid #4f46e5':'3px solid transparent';
+        b.style.color=t===tab?'#4f46e5':'#64748b';
+    });
+};
